@@ -27,32 +27,21 @@
 #define MARKDATA_FRONT 0x90
 #define MARKDATA_REAR 0x91
 
-enum AlarmLevel
-{
-	green,	// 0 good to go
-	yellow,	// 1 someone's there
-	red,		// 2 roadkill
- 	invalid // 3 well, invalid.
-};
-
 class LaserScanner
 {
 	private:
 		int mSocketDescriptor;
-		
+
 		unsigned char *laserDataBuffer;
 		size_t laserDataBufferLength;
-
-// 		AlarmLevel alarmLevelFront, alarmLevelRear;	///< used to save the scanner's current alarm levels (red=2/yellow=1/green=0)
-
-		/// This method handles incoming UDP packets and populates the data given as parameters.
-		bool readPendingDatagram(void);
 
 	public:
 		LaserScanner(void);
 		~LaserScanner(void);
-
-// 		AlarmLevel getAlarmLevel(const RobotSide side) const;
+		
+		bool initialize(const std::string& interface);
+		
+		bool getScan(const std::string& scanner, std::vector<float>& ranges);
 };
 
 #endif

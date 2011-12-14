@@ -18,4 +18,5 @@
   <url>http://ros.org/wiki/tams_taser/laserscanner</url>
   <depend package="roscpp"/>
   <depend package="sensor_msgs"/>
+	<depend package="iowarrior"/>
 </package>

@@ -4,14 +4,19 @@ LaserScanner::LaserScanner(void)
 {
 	ROS_INFO("LaserScanner::LaserScanner()");
 
-	// this level is invalid, but will be updated immediately.
-// 	alarmLevelFront = alarmLevelRear = invalid;
+	mSocketDescriptor = -1;
 
-	laserDataBuffer = 0;
+	laserDataBuffer = NULL;
 	laserDataBufferLength = 0;
+}
 
+bool LaserScanner::initialize(const std::string& interface)
+{
 	if((mSocketDescriptor = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
-		ROS_FATAL("LaserScanner::LaserScanner(): socket() failed.");
+	{
+		ROS_ERROR("LaserScanner::LaserScanner(): socket() failed.");
+		return false;
+	}
 
 	struct sockaddr_in sa;
 	memset(&sa, 0, sizeof(sa));
@@ -23,16 +28,26 @@ LaserScanner::LaserScanner(void)
 	setsockopt(mSocketDescriptor, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
 
 	if(bind(mSocketDescriptor, (struct sockaddr*) &sa, sizeof(sa)) < 0)
-		ROS_FATAL("LaserScanner::LaserScanner(): bind() failed.");
+	{
+		ROS_ERROR("LaserScanner::LaserScanner(): bind() failed.");
+		close(mSocketDescriptor);
+		return false;
+	}
 
 	struct ip_mreqn mreq;
 	memset(&mreq, 0, sizeof(mreq));
 	mreq.imr_multiaddr.s_addr = inet_addr("224.0.0.23");
 	mreq.imr_address.s_addr = INADDR_ANY;
-	mreq.imr_ifindex = if_nametoindex("eth0");
+	mreq.imr_ifindex = if_nametoindex(interface.c_str());
 
 	if(setsockopt(mSocketDescriptor, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) < 0)
-		ROS_FATAL("LaserScanner::LaserScanner(): setsockopt() failed.");
+	{
+		ROS_ERROR("LaserScanner::LaserScanner(): setsockopt() failed.");
+		close(mSocketDescriptor);
+		return false;
+	}
+	
+	return true;
 }
 
 LaserScanner::~LaserScanner(void)
@@ -41,8 +56,11 @@ LaserScanner::~LaserScanner(void)
 	close(mSocketDescriptor);
 }
 
-bool LaserScanner::readPendingDatagram(void)
+bool LaserScanner::getScan(const std::string& scanner, std::vector<float>& ranges)
 {
+	if(mSocketDescriptor < 0)
+		ROS_FATAL("LaserScanner::getScan(): error: not yet initialized.");
+	
 	fd_set rfds;
 	size_t bytesReady; // how many bytes are going to be read by recv()
 	ssize_t bytesRead;
@@ -51,9 +69,10 @@ bool LaserScanner::readPendingDatagram(void)
 	FD_SET(mSocketDescriptor, &rfds);
 	
 	// Wait until data is ready
+	ROS_INFO("LaserScanner::getScan(): waiting for data packet to arrive...");
 	if(select(mSocketDescriptor+1, &rfds, NULL, NULL, NULL) < 0)
 	{
-	    ROS_FATAL("LaserScanner::readPendingDatagrams(): error: select() failed: %s\n", strerror(errno));
+	    ROS_FATAL("LaserScanner::getScan(): error: select() failed: %s\n", strerror(errno));
 	    close(mSocketDescriptor);
 	    return false;
 	}
@@ -61,7 +80,7 @@ bool LaserScanner::readPendingDatagram(void)
 	// Find out how many bytes are waiting...
 	if(ioctl(mSocketDescriptor, FIONREAD, &bytesReady) < 0)
 	{
-	    ROS_FATAL("LaserScanner::readPendingDatagrams(): error: ioctl() failed: %s\n", strerror(errno));
+	    ROS_FATAL("LaserScanner::getScan(): error: ioctl() failed: %s\n", strerror(errno));
 	    close(mSocketDescriptor);
 	    return false;
 	}
@@ -71,7 +90,7 @@ bool LaserScanner::readPendingDatagram(void)
 	{
 		if (!(laserDataBuffer = (unsigned char*) realloc(laserDataBuffer, laserDataBufferLength = bytesReady+1)))
 		{
-			ROS_FATAL("LaserScanner::readPendingDatagrams(): error: out of memory\n");
+			ROS_FATAL("LaserScanner::getScan(): error: out of memory\n");
 			close(mSocketDescriptor);
 			return false;
 	  }
@@ -79,7 +98,7 @@ bool LaserScanner::readPendingDatagram(void)
 
 	if((bytesRead = recv(mSocketDescriptor, laserDataBuffer, laserDataBufferLength, 0)) < 0)
 	{
-	  ROS_FATAL("LaserScanner::readPendingDatagrams(): error: recv() failed: %s\n", strerror(errno));
+	  ROS_FATAL("LaserScanner::getScan(): error: recv() failed: %s\n", strerror(errno));
 	  close(mSocketDescriptor);
 	  return false;
 	}
@@ -95,53 +114,40 @@ bool LaserScanner::readPendingDatagram(void)
     return false;
 	}
 
+  const unsigned char idOfScanDataFromDesiredScanner = scanner.compare("front") == 0 ? SCANDATA_FRONT : SCANDATA_REAR;
+
 	const unsigned char scannerId = laserDataBuffer[1];
 
-	ROS_INFO("LaserScanner::readPendingDatagram(): received a packet from scanner 0x%02x", scannerId);
+	ROS_INFO("LaserScanner::getScan(): received a packet from scanner 0x%02x", scannerId);
 
-	if((unsigned char)laserDataBuffer[4] == 0xb0 && bytesRead == 732)
+	if((unsigned char)laserDataBuffer[4] == 0xb0 && bytesRead == 732 && scannerId == idOfScanDataFromDesiredScanner)
 	{
-		// Telegram containing normal scandata.
+		// Telegram containing normal scandata from the desired scanner
 		// In the old non-ros days, we'd cconvert this into the platform-frame,
 		// but bow we just pump out the values as specified in LaserScan.msg
-// 		if(scannerId == SCANDATA_FRONT)
-// 			convertDatagramToScan(sideFront);
-// 		if(scannerId == SCANDATA_REAR)
-// 			convertDatagramToScan(sideRear);
+		unsigned char* data = laserDataBuffer + 7;
 
-
-	}
-	else if((unsigned char)laserDataBuffer[4] == 0xb3)
-	{
-		// Telegram containing extracted marks and alarm levels.
-		// Not used in ROS so far.
-		/*
-		if(scannerId == MARKDATA_FRONT)
+    for(int i = -180; i < 181; i++)
 		{
-			updateLaserMarks(datagram, sideFront);
-			AlarmLevel alarmLevelFrontNew = (AlarmLevel)datagram.at((datagram.at(2)|(datagram.at(3)<<8))+4-1);
-			if(alarmLevelFront != alarmLevelFrontNew)
-				ROS_INFO("LaserScanner::readPendingDatagram(): new alarm level front: %d", alarmLevelFrontNew);
-
-			alarmLevelFront = alarmLevelFrontNew;
-		}
-
-		if(scannerId == MARKDATA_REAR)
-		{
-			updateLaserMarks(datagram, sideRear);
-			AlarmLevel alarmLevelRearNew = (AlarmLevel)datagram.at((datagram.at(2)|(datagram.at(3)<<8))+4-1);
-
-			if(alarmLevelRear != alarmLevelRearNew)
-				ROS_INFO("LaserScanner::readPendingDatagram(): new alarm level rear: %d", alarmLevelRearNew);
-				
-			alarmLevelRear = alarmLevelRearNew;
-		}
-		*/
+        unsigned short dist = *(data++);
+        dist |= (*(data++)&0x1f)<<8;
+        if(dist <= 0x1ff7)
+				{
+//             _scanner[idx]->_scanDist[cnt] = (float)dist/1000.0; // in Meter
+					ranges.push_back((float)dist/1000.0);
+//             _scanner[idx]->_scanAngle[cnt] = i*0.5*M_PI/180.0;
+        }
+    }
+    
+    return true;
 	}
 	else
 	{
-		ROS_ERROR("LaserScanner::readPendingDatagram(): unknown packet, ignoring.");
+		// Either the packet is from the wrong scanner, or it contains mark data, or something else is wrong.
+		// We need to wait for the next packet and hope it contains the desired data.
+		ROS_DEBUG("LaserScanner::getScan(): received a packet from scanner 0x%02x with %d bytes, wrong packet, retrying.", scannerId, bytesRead);
+		return getScan(scanner, ranges);
 	}
 	
-	return true;
+	return false;
 }

@@ -13,46 +13,60 @@
 
 #include <sensor_msgs/LaserScan.h>
 
-#define DEG2RAD(DEG) ((DEG)*((PI)/(180.0)))
+#define DEG2RAD(DEG) ((DEG)*((M_PI)/(180.0)))
 
 LaserScanner mLaserScanner;
 
 int main(int argc, char **argv)
 {
-	ros::init(argc, argv, "laserscanner_server");
+	// Make sure we were called with either "front" or "rear" as argument
+	if(argc != 3 || !(std::string(argv[2]).compare("front") != 0 || std::string(argv[2]).compare("rear") != 0))
+	{
+		ROS_INFO("usage: laserscanner_server interface [front|rear]");
+		ROS_INFO("This will create a node publishing values of either the front or rear.");
+		ROS_INFO("laserscanner attached to the given network interface. So, you need two");
+		ROS_INFO("laserscanner_server nodes for TASER.");
+		return 1;
+	}
+
+  // Create a node with a name depending on the selected scanner
+  std::string nodename("laserscanner_server_");
+	nodename.insert(nodename.size(), argv[2]);
+	ros::init(argc, argv, nodename);
 	ros::NodeHandle n;
-	
+
+	const std::string interface(argv[1]);
+
+	ROS_INFO("WARNING: The rabbit powercore box IP address is hard-coded to 192.168.0.2.");
+	ROS_INFO("         Please make sure %s is in the same subnet.", interface.c_str());
+
+	std::string selectedScanner(argv[2]);
+	selectedScanner.insert(0, "lrf_");
+
 	// Switch on the LaserScanner power-supplies and wait if not already switched on
 	bool laserScannerPower = false;
-	if(
-		!(getIoWarrior("lrf_front", laserScannerPower) && laserScannerPower)
-		||
-		!(getIoWarrior("lrf_rear", laserScannerPower) && laserScannerPower)
-	)
+	if(!(getIoWarrior(selectedScanner, laserScannerPower) && laserScannerPower))
 	{
-		if(!setIoWarrior("lrf_front", true) || !switchIoWarrior("lrf_rear", true))
+
+		ROS_INFO("enabling laserscanner %s", selectedScanner.c_str());
+		if(!setIoWarrior(selectedScanner, true))
 		{
 			ROS_FATAL("Couldn't enable laserscanner-power, exiting");
 			exit(1);
 		}
-		ROS_INFO("Had to switch on laserscanner by myself. Waiting 10s for them to come up.");
-		usleep(10000000);
+
+		ROS_INFO("Had to switch on laserscanner by myself. Waiting 10s for it to come up.");
+		usleep(20000000);
 	}
+	
+	if(!mLaserScanner.initialize(interface))
+		ROS_FATAL("Couldn't initialize laserscanner %s on interface %s, exiting", selectedScanner.c_str(), interface.c_str());
 
-	if(!mLaserScanner.initialize())
-	{
-		ROS_ERROR("Couldn't set up UDP socket, exiting.");
-		return 1;
-	}
+	ros::Publisher pub_laserscanner = n.advertise<sensor_msgs::LaserScan>("LaserScan", 1);
 
-	ros::Publisher pub_laserscanner = n.advertise<laserscanner::LaserScan>("LaserScan", 1);
+	ROS_INFO("Starting to publish laserscans for %s attached to %s", selectedScanner.c_str(), interface.c_str());
 
-	// Not needed, the select() in laserscanner's readPendingDatagrams will block until data is ready
-// 	ros::Rate loop_rate(20); // Hz, hopefully
-
-	ROS_INFO("Starting to publish laserscans");
-
-	laserscanner::LaserScan msgScan;
+	sensor_msgs::LaserScan msgScan;
 	msgScan.angle_min = DEG2RAD(-90.0f);
 	msgScan.angle_max = DEG2RAD(90.0f);
 	msgScan.angle_increment = DEG2RAD(0.5f);
@@ -69,9 +83,9 @@ int main(int argc, char **argv)
 	
 	while (ros::ok())
 	{
-		mLaserScanner.getValues(msgJoy.axes[0], msgJoy.axes[1]);
+		mLaserScanner.getScan(selectedScanner, msgScan.ranges);
 
-		ROS_DEBUG("main(): will now publish values of axis0 %.4f, axis1 %.4f", msgJoy.axes[0], msgJoy.axes[1]);
+		ROS_DEBUG("main(): publishing %d rays from %s scanner.", selectedScanner.c_str());
 
 		/**
 		 * The publish() function is how you send messages. The parameter
