@@ -1,0 +1,21 @@
+<package>
+  <description brief="remotecontrol">
+
+    A driver for the laserscanners attached to TASER. The laserscanners are connected to the
+    custom-made RABBIT board from Hannes Bistry via RS-422. This board does some pre-processing
+    and spits out the scandata as UDP packets. Great, because two RS-422 connections would
+		otherwise cause lots of interrupts.
+
+    So this driver opens a UDP socket, receives the packets, converts the data and publishes
+    it on the scan-topic in a format like
+
+      http://www.ros.org/doc/api/sensor_msgs/html/msg/LaserScan.html
+
+  </description>
+  <author>Ben Adler, adler@informatik.uni-hamburg.de</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/tams_taser/laserscanner</url>
+  <depend package="roscpp"/>
+  <depend package="sensor_msgs"/>
+</package>

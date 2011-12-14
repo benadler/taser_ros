@@ -1,0 +1,21 @@
+<package>
+  <description brief="remotecontrol">
+
+    A driver for the remotecontrol receiver attached to the can-io-board on TASER's right side.
+    This node publishes values between -1 (left, reverse) and 1.0 (forward, right) with 20Hz on
+    the topic "remotecontrol_values".
+
+    Make sure to rotate the "Steering D/R" wheel to the very front of the sender, else the
+    steering amplitude will be too small.
+
+    Employs the NET_DEV-variant of the peak-system pcan-dongle driver and the linux can-
+    socket network stack to talk to the CAN-IO-board, to which the rc-receiver is connected.
+  </description>
+  <author>Ben Adler, adler@informatik.uni-hamburg.de</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/tams_taser/remotecontrol</url>
+  <depend package="roscpp"/>
+	<depend package="remotecontrol"/>
+	<depend package="ptu"/>
+</package>

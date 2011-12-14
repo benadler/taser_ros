@@ -1,0 +1,21 @@
+<package>
+  <description brief="iowarrior">
+    A driver for the iowarrior attached to TASER's usb port. It requires the iowarrior kernel
+    module to be loaded. It uses the included iowarrior-sdk to offer the get_power and
+    set_power services. You can pass either the power-socket-number (0-7 for the first and
+    only port on our iowarrior 24) or a device name to both calls for getting/setting power.
+    You can also use the special name "all" to set all sockets on or off.
+     
+    The socket names (and what power-sockets they map to) are defined in parameters.yaml, so
+    make sure to
+     
+      rosparam load parameters.yaml
+      
+    before you start.
+  </description>
+  <author>Ben Adler, adler@informatik.uni-hamburg.de</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/iowarrior</url>
+  <depend package="roscpp"/>
+</package>

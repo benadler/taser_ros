@@ -1,0 +1,6 @@
+float32 spdPan
+float32 spdTilt
+float32 accPan
+float32 accTilt
+---
+bool success

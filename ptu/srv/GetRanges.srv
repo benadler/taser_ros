@@ -1,0 +1,6 @@
+---
+bool success
+float32 panMin
+float32 panMax
+float32 tiltMin
+float32 tiltMax

@@ -1,0 +1,10 @@
+<stack>
+
+  <description brief="ROS-stack for TASER, the TAMS Service Robot">A stack providing ROS packages that drive TASER, the TAMS Service Robot</description>
+  <author>Maintained by Ben Adler, adler@informatik.uni-hamburg.de</author>
+  <license>BSD</license>  
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/taser</url>
+  <depend stack="ros" />
+
+</stack>

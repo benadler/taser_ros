@@ -1,0 +1,39 @@
+<launch>
+
+  <!-- see http://www.ros.org/wiki/roslaunch/XML/machine -->
+	<machine name="taser" address="tams61" default="true"/>
+
+  <!-- attributes of the <node>-element:
+		name			is the nodename in the ROS system
+		pkg				is the package name
+		type			is the name of the executable
+		args			are command-line arguments passed to the executable
+		respawn		will make the node respawn on exit
+		machine		is a machine name. Machines are defined separately.
+		required	if this node dies, this attribute kills the entire roslaunch
+		cwd				working directory, a value of "node" means cwd of executable
+	-->
+
+	<node machine="taser" name="iowarrior_server" pkg="iowarrior" type="iowarrior_server" required="true">
+		<rosparam file="$(find iowarrior)/parameters.yaml" command="load" />
+	</node>
+
+	<node machine="taser" name="remotecontrol_server" pkg="remotecontrol" type="remotecontrol_server" required="true" />
+
+	<node machine="taser" name="drive" pkg="drive" type="drive_server" args="" required="true">
+	  <rosparam file="$(find drive)/parameters.yaml" command="load" />
+	</node>
+
+	<node machine="taser" name="ptu_server" pkg="ptu" type="ptu_server" required="true" />
+
+	<node machine="taser" name="battery_server" pkg="battery" type="battery_server" required="true" />
+
+  <group if="$(optenv REMOTECONTROL_TO_PTU false)">
+	  <node machine="taser" name="remotecontrol_to_ptu" pkg="remotecontrol_to_ptu" type="remotecontrol_to_ptu" required="true" args="rel" />
+	</group>
+	
+  <group if="$(optenv REMOTECONTROL_TO_DRIVE false)">
+	  <node machine="taser" name="remotecontrol_to_drive" pkg="remotecontrol_to_drive" type="remotecontrol_to_drive" required="true" />
+	</group>
+
+</launch>

@@ -1,0 +1,16 @@
+<package>
+  <description brief="drive">
+
+    A driver for TASER's differential drive, consisting of two motors.
+
+    Employs the NET_DEV-variant of the peak-system pcan-dongle driver and the linux can-
+    socket network stack to talk to the CAN-connected motors.
+  </description>
+  <author>Ben Adler, adler@informatik.uni-hamburg.de</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/tams_taser/drive</url>
+  <depend package="roscpp"/>
+	<depend package="iowarrior"/>
+  <depend package="std_msgs"/>
+</package>

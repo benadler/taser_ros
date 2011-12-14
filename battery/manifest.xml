@@ -1,0 +1,17 @@
+<package>
+  <description brief="battery">
+
+    A driver for TASER's main battery. Publishes the voltage on the battery_voltage topic
+    at 0.1 Hz and also offers a service named get_voltage.
+
+    Employs the NET_DEV-variant of the peak-system pcan-dongle driver and the linux can-
+    socket network stack to talk to the CAN-IO-board, to which the battery-voltmeter is
+    connected.
+  </description>
+  <author>Ben Adler, adler@informatik.uni-hamburg.de</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/tams_taser/iowarrior</url>
+  <depend package="roscpp"/>
+  <depend package="std_msgs"/>
+</package>

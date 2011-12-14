@@ -1,0 +1,15 @@
+<package>
+  <description brief="ptu">
+
+    A driver for TASER's Pan-Tilt-Unit.
+
+  </description>
+  <author>Ben Adler, adler@informatik.uni-hamburg.de</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/tams_taser/iowarrior</url>
+  <depend package="roscpp"/>
+	<depend package="iowarrior"/>
+  <depend package="std_msgs"/>
+  <depend package="tf"/>
+</package>
