@@ -18,15 +18,23 @@
 		<rosparam file="$(find iowarrior)/parameters.yaml" command="load" />
 	</node>
 
+	<node pkg="tf" type="static_transform_publisher" name="transform_broadcaster_laserscanner_front" args="0 0 0 0 0 0 platform frame_laserscanner_front 100" />
+	<node pkg="tf" type="static_transform_publisher" name="transform_broadcaster_laserscanner_rear" args="0 0 0 3 0 0 platform frame_laserscanner_rear 100" />
+
 	<node machine="taser" name="remotecontrol_server" pkg="remotecontrol" type="remotecontrol_server" required="true" />
 
 	<node machine="taser" name="drive" pkg="drive" type="drive_server" args="" required="true">
 	  <rosparam file="$(find drive)/parameters.yaml" command="load" />
 	</node>
 
+<!--
 	<node machine="taser" name="ptu_server" pkg="ptu" type="ptu_server" required="true" />
+-->
 
 	<node machine="taser" name="battery_server" pkg="battery" type="battery_server" required="true" />
+
+	<node machine="taser" name="laserscanner_server_name_from_launchfile_front" pkg="laserscanner" args="eth0 front"  type="laserscanner_server" required="true" />
+	<node machine="taser" name="laserscanner_server_name_from_launchfile_rear" pkg="laserscanner" args="eth0 rear"  type="laserscanner_server" required="true" />
 
   <group if="$(optenv REMOTECONTROL_TO_PTU false)">
 	  <node machine="taser" name="remotecontrol_to_ptu" pkg="remotecontrol_to_ptu" type="remotecontrol_to_ptu" required="true" args="rel" />

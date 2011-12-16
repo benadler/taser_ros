@@ -69,7 +69,7 @@ bool LaserScanner::getScan(const std::string& scanner, std::vector<float>& range
 	FD_SET(mSocketDescriptor, &rfds);
 	
 	// Wait until data is ready
-	ROS_INFO("LaserScanner::getScan(): waiting for data packet to arrive...");
+// 	ROS_INFO("LaserScanner::getScan(): waiting for data packet to arrive...");
 	if(select(mSocketDescriptor+1, &rfds, NULL, NULL, NULL) < 0)
 	{
 	    ROS_FATAL("LaserScanner::getScan(): error: select() failed: %s\n", strerror(errno));
@@ -93,7 +93,7 @@ bool LaserScanner::getScan(const std::string& scanner, std::vector<float>& range
 			ROS_FATAL("LaserScanner::getScan(): error: out of memory\n");
 			close(mSocketDescriptor);
 			return false;
-	  }
+		}
 	}
 
 	if((bytesRead = recv(mSocketDescriptor, laserDataBuffer, laserDataBufferLength, 0)) < 0)
@@ -110,15 +110,15 @@ bool LaserScanner::getScan(const std::string& scanner, std::vector<float>& range
 	
 	if(laserDataBuffer[0] != 0x02)
 	{
-    ROS_ERROR("STX (Start-Of-Text) not found, Hannes LaserBox is sending weird stuff!");
-    return false;
+	  ROS_ERROR("STX (Start-Of-Text) not found, Hannes LaserBox is sending weird stuff!");
+	  return false;
 	}
 
-  const unsigned char idOfScanDataFromDesiredScanner = scanner.compare("front") == 0 ? SCANDATA_FRONT : SCANDATA_REAR;
+	const unsigned char idOfScanDataFromDesiredScanner = scanner.compare("lrf_front") == 0 ? SCANDATA_FRONT : SCANDATA_REAR;
 
 	const unsigned char scannerId = laserDataBuffer[1];
 
-	ROS_INFO("LaserScanner::getScan(): received a packet from scanner 0x%02x", scannerId);
+	ROS_DEBUG("LaserScanner::getScan(): received a packet from scanner 0x%02x", scannerId);
 
 	if((unsigned char)laserDataBuffer[4] == 0xb0 && bytesRead == 732 && scannerId == idOfScanDataFromDesiredScanner)
 	{
@@ -127,19 +127,19 @@ bool LaserScanner::getScan(const std::string& scanner, std::vector<float>& range
 		// but bow we just pump out the values as specified in LaserScan.msg
 		unsigned char* data = laserDataBuffer + 7;
 
-    for(int i = -180; i < 181; i++)
-		{
-        unsigned short dist = *(data++);
-        dist |= (*(data++)&0x1f)<<8;
-        if(dist <= 0x1ff7)
-				{
-//             _scanner[idx]->_scanDist[cnt] = (float)dist/1000.0; // in Meter
-					ranges.push_back((float)dist/1000.0);
-//             _scanner[idx]->_scanAngle[cnt] = i*0.5*M_PI/180.0;
-        }
-    }
+	  for(int i = -180; i < 181; i++)
+	  {
+	    unsigned short dist = *(data++);
+	    dist |= (*(data++)&0x1f)<<8;
+	    if(dist <= 0x1ff7)
+	    {
+  //             _scanner[idx]->_scanDist[cnt] = (float)dist/1000.0; // in Meter
+					  ranges.push_back((float)dist/1000.0);
+  //             _scanner[idx]->_scanAngle[cnt] = i*0.5*M_PI/180.0;
+	    }
+	  }
     
-    return true;
+	  return true;
 	}
 	else
 	{

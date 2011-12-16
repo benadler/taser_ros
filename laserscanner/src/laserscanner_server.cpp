@@ -20,8 +20,11 @@ LaserScanner mLaserScanner;
 int main(int argc, char **argv)
 {
 	// Make sure we were called with either "front" or "rear" as argument
-	if(argc != 3 || !(std::string(argv[2]).compare("front") != 0 || std::string(argv[2]).compare("rear") != 0))
+	// We cannot really count arguments, because when we're started by roslaunch, it'll add many more.
+	if(argc < 3 || !(std::string(argv[2]).compare("front") != 0 || std::string(argv[2]).compare("rear") != 0))
 	{
+		for(int i=0;i<argc;i++) printf("%s ", argv[i]);
+		printf("\n");
 		ROS_INFO("usage: laserscanner_server interface [front|rear]");
 		ROS_INFO("This will create a node publishing values of either the front or rear.");
 		ROS_INFO("laserscanner attached to the given network interface. So, you need two");
@@ -30,7 +33,7 @@ int main(int argc, char **argv)
 	}
 
   // Create a node with a name depending on the selected scanner
-  std::string nodename("laserscanner_server_");
+	std::string nodename("laserscanner_server_");
 	nodename.insert(nodename.size(), argv[2]);
 	ros::init(argc, argv, nodename);
 	ros::NodeHandle n;
@@ -62,7 +65,9 @@ int main(int argc, char **argv)
 	if(!mLaserScanner.initialize(interface))
 		ROS_FATAL("Couldn't initialize laserscanner %s on interface %s, exiting", selectedScanner.c_str(), interface.c_str());
 
-	ros::Publisher pub_laserscanner = n.advertise<sensor_msgs::LaserScan>("LaserScan", 1);
+	std::string topicname("laserscanner_");
+	topicname.insert(topicname.size(), argv[2]);
+	ros::Publisher pub_laserscanner = n.advertise<sensor_msgs::LaserScan>(topicname, 1);
 
 	ROS_INFO("Starting to publish laserscans for %s attached to %s", selectedScanner.c_str(), interface.c_str());
 
@@ -70,6 +75,13 @@ int main(int argc, char **argv)
 	msgScan.angle_min = DEG2RAD(-90.0f);
 	msgScan.angle_max = DEG2RAD(90.0f);
 	msgScan.angle_increment = DEG2RAD(0.5f);
+	
+	// msgScan.Header.frame_id is the transformation frame (coordinate system) of ROS::tf
+	// that our data will be associated with. Lets call it frame_laserscanner_[front|rear]
+	// for now.
+	std::string frame_id(topicname);
+	frame_id.insert(0, "/frame_");
+	msgScan.header.frame_id = frame_id;
 	
 	// time_increment is amount of seconds between rays. This is fscked up in LMS200
 	// because with 0.5 deg resolution and 75 rounds per second motor speed, the LMS
@@ -84,20 +96,19 @@ int main(int argc, char **argv)
 	while (ros::ok())
 	{
 		mLaserScanner.getScan(selectedScanner, msgScan.ranges);
+		
+		ROS_DEBUG("main(): publishing %d rays from %s scanner.", msgScan.ranges.size(), selectedScanner.c_str());
+		
+		/*for(int i=0;i<362;i++)
+		{
+		  ROS_INFO("ray %d: %2.2f", i, msgScan.ranges[i]);
+		}*/
 
-		ROS_DEBUG("main(): publishing %d rays from %s scanner.", selectedScanner.c_str());
-
-		/**
-		 * The publish() function is how you send messages. The parameter
-		 * is the message object. The type of this object must agree with the type
-		 * given as a template parameter to the advertise<>() call, as was done
-		 * in the constructor above.
-		 */
 		pub_laserscanner.publish(msgScan);
+		
+		msgScan.ranges.clear();
 
 		ros::spinOnce();
-
-// 		loop_rate.sleep();
 	}
 
 	return 0;

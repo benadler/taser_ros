@@ -29,5 +29,4 @@ rosbuild_gensrv()
 
 include_directories(ptu_server ${PROJECT_SOURCE_DIR}/../common/include)
 rosbuild_add_executable(ptu_server src/ptu.cpp src/serialinterface.cpp src/ptuwrapper.cpp src/ptu_server.cpp)
-
 rosbuild_add_executable(ptu_client src/ptu_client.cpp)
